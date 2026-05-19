@@ -18,9 +18,9 @@ An image factory with Azure Image Builder (AIB) is a pipeline that automatically
 
 The build engine. You define an image template (JSON/Bicep) that specifies:
 
-- A **source image** (marketplace, existing managed image, or another gallery image)
+- **A source image** (marketplace, existing managed image, or another gallery image)
 - **Customization steps** (PowerShell scripts, Shell scripts, file uploads, Windows Update, restarts)
-- A **distribution target** (where the finished image goes)
+- **A distribution target** (where the finished image goes)
 
 ### Azure Compute Gallery (ACG)
 
