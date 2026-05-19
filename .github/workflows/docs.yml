@@ -28,7 +28,7 @@ jobs:
         with:
           ruby-version: "3.3"
           bundler-cache: true
-          cache-version: 2
+          cache-version: 3
           working-directory: docs
 
       - uses: actions/configure-pages@v5
