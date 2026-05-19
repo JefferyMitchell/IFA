@@ -49,6 +49,7 @@ az provider register --namespace Microsoft.Compute --wait
 az provider register --namespace Microsoft.KeyVault --wait
 az provider register --namespace Microsoft.Storage --wait
 az provider register --namespace Microsoft.Network --wait
+az provider register --namespace Microsoft.ContainerInstance --wait
 ```
 
 > **Note:** First-time registration can take 5–15 minutes per provider, particularly `Microsoft.VirtualMachineImages`. The `--wait` flag blocks until each provider is fully registered before moving to the next. Subsequent runs are instant.

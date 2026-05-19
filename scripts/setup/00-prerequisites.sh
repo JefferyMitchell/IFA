@@ -39,6 +39,7 @@ az provider register --namespace Microsoft.KeyVault --wait
 az provider register --namespace Microsoft.Storage --wait
 az provider register --namespace Microsoft.Network --wait
 az provider register --namespace Microsoft.ManagedIdentity --wait
+az provider register --namespace Microsoft.ContainerInstance --wait
 
 echo ""
 echo "Verifying AIB provider registration..."
