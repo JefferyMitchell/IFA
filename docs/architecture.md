@@ -71,6 +71,24 @@ Define which regions ACG replicates to based on where workloads run. Replication
 
 Grant subscription teams `Reader` on the gallery or specific image definitions so they can deploy from it but cannot modify it.
 
+### 5. Subscription Strategy
+
+Most organizations should run the factory across **two subscriptions** rather than one:
+
+| Subscription | Purpose | Recommended Role |
+|---|---|---|
+| **Non-prod** | Dev and test image builds, pipeline experimentation, template development | `Owner` |
+| **Prod** | Golden images consumed by production workloads | `Contributor` + `User Access Administrator` |
+
+A single subscription is acceptable for small teams or pure dev/test environments. Consider adding more subscriptions when:
+
+- **Compliance boundaries** require production workloads to be isolated with stricter audit logging and policy enforcement
+- **Cost attribution** needs to be split across teams or cost centers without complex tagging
+- **Regional isolation** is required for data residency — one subscription per geography keeps images and build artifacts within the required boundary
+- **Scale limits** are reached — Azure caps concurrent AIB builds and gallery replications per subscription; high-volume environments may need to spread across subscriptions
+
+> **Tip:** `Owner` covers both `Contributor` and `User Access Administrator`. On a dedicated non-prod factory subscription it is the simplest starting point. Tighten to explicit roles on production.
+
 ---
 
 ## Minimal AIB Template (Bicep)
@@ -124,6 +142,29 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
 | **Agent injection** | Install monitoring (AMA), security (Defender), or management agents in the golden base |
 | **AVD image factory** | Produce images consumed directly by AVD host pool updates |
 | **Multi-OS** | Separate gallery definitions for Windows, RHEL, Ubuntu — same pipeline structure |
+
+---
+
+## Cost Considerations
+
+AIB itself has no licensing fee — you pay only for the Azure resources consumed during a build. The table below shows real-world costs from a single end-to-end build of a Windows Server 2022 image with hardening scripts, Windows Update, and single-region replication to East US.
+
+| Resource | Details | Cost per build |
+|---|---|---|
+| **Build VM** | Standard_D2s_v3, ~75 min | ~$0.12 |
+| **OS disk** | 128 GB managed disk during build | ~$0.01 |
+| **Storage** | Scripts container (< 10 MB) | < $0.01 |
+| **Gallery storage** | One image version, East US | ~$0.05 / month |
+| **Replication** | Each additional region adds ~$0.04–0.08 per version depending on image size | Per region |
+
+**Typical single-region build: under $0.20.**
+
+Costs that grow with scale:
+- **Number of image definitions** — each version stored in the gallery adds storage cost (~$0.05/month per version per region)
+- **Replication regions** — each region is a full copy; 3-region replication triples gallery storage cost
+- **Build frequency** — a weekly patch cycle (52 builds/year) on a single definition costs roughly $10/year in compute
+
+> **Cost tip:** Set a retention policy on gallery image versions. Keeping only the last 3–5 versions per definition avoids unbounded storage growth as the factory matures.
 
 ---
 
