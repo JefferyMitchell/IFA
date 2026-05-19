@@ -5,7 +5,7 @@ theme: just-the-docs
 # Site settings
 search_enabled: true
 nav_sort: order
-color_scheme: default
+color_scheme: light
 
 # Footer
 footer_content: "Azure Image Factory &mdash; Reference Solution"

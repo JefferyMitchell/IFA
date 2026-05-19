@@ -14,3 +14,9 @@ desktop.ini
 
 # Temp files from build scripts
 *.log
+
+# Jekyll / Bundler
+vendor/
+.bundle/
+docs/_site/
+Gemfile.lock
