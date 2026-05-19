@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+*.swp
+*.bak
+.vscode/settings.json
+
+# Secrets — never commit real parameter files with values filled in
+*.local.parameters.json
+.env
+
+# Temp files from build scripts
+*.log

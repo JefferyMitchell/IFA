@@ -1,0 +1,21 @@
+title: Azure Image Factory
+description: Automated VM image creation with Azure Image Builder and Azure Compute Gallery
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+
+# Site settings
+search_enabled: true
+nav_sort: order
+color_scheme: default
+
+# Footer
+footer_content: "Azure Image Factory &mdash; Reference Solution"
+
+# Heading anchor links
+heading_anchors: true
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"

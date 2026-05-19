@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "templateName": {
+      "value": "tmpl-win2022-citrix-vda"
+    },
+    "identityName": {
+      "value": "uami-aib"
+    },
+    "galleryName": {
+      "value": "acg_golden_images"
+    },
+    "imageDefinitionName": {
+      "value": "win2022-citrix-vda"
+    },
+    "storageAccountName": {
+      "value": "REPLACE_WITH_YOUR_STORAGE_ACCOUNT_NAME"
+    },
+    "replicationRegions": {
+      "value": ["eastus", "westus2", "westeurope"]
+    },
+    "buildVmSize": {
+      "value": "Standard_D4s_v3"
+    },
+    "buildTimeoutMinutes": {
+      "value": 180
+    }
+  }
+}

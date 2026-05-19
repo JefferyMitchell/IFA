@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "identityName": {
+      "value": "uami-aib"
+    },
+    "galleryName": {
+      "value": "acg_golden_images"
+    },
+    "imageDefinitionName": {
+      "value": "win2022-base"
+    },
+    "storageAccountName": {
+      "value": "REPLACE_WITH_UNIQUE_NAME"
+    }
+  }
+}
