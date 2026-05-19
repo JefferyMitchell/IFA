@@ -108,10 +108,10 @@ az deployment group create \
 
 This deploys:
 
-- A **User-Assigned Managed Identity** with the required role assignments
-- An **Azure Compute Gallery** with initial image definitions
-- A **Storage Account** for build scripts and artifacts
-- An **Azure Image Builder image template** (in a disabled/draft state)
+- **A User-Assigned Managed Identity** with the required role assignments
+- **An Azure Compute Gallery** with initial image definitions
+- **A Storage Account** for build scripts and artifacts
+- **An Azure Image Builder image template** (in a disabled/draft state)
 
 ### 4. Upload Customization Scripts
 
