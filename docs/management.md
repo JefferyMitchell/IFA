@@ -130,6 +130,36 @@ az sig image-version delete \
 
 > **Caution:** Deleting a version is permanent. Any VM deployed from that version will continue to run, but the image cannot be redeployed.
 
+### Retention Policy — Keep the Last N Versions
+
+Azure Compute Gallery has no built-in retention policy. Run this script periodically (or add it to your pipeline after a successful build) to automatically delete all but the most recent N versions of a definition:
+
+```bash
+RESOURCE_GROUP="rg-image-factory"
+GALLERY_NAME="acg_golden_images"
+IMAGE_DEFINITION="win2022-base"
+KEEP=5  # number of versions to retain
+
+# List versions sorted oldest-first, skip the most recent KEEP versions, delete the rest
+az sig image-version list \
+  --resource-group $RESOURCE_GROUP \
+  --gallery-name $GALLERY_NAME \
+  --gallery-image-definition $IMAGE_DEFINITION \
+  --query "sort_by(@, &publishingProfile.publishedDate)[].name" \
+  -o tsv | head -n -$KEEP | while read version; do
+    echo "Deleting $version..."
+    az sig image-version delete \
+      --resource-group $RESOURCE_GROUP \
+      --gallery-name $GALLERY_NAME \
+      --gallery-image-definition $IMAGE_DEFINITION \
+      --gallery-image-version "$version"
+done
+```
+
+Change `KEEP=5` to match your rollback window. A value of 3–5 is sufficient for most environments — enough to roll back across one or two patch cycles while keeping storage costs flat.
+
+> **Tip:** Run this at the end of your build pipeline, after a new version is successfully published, so cleanup is automatic and the version count never grows unbounded.
+
 ---
 
 ## Updating Customization Scripts
@@ -329,7 +359,7 @@ Each region entry shows a `regionalReplicaCount` and `storageAccountType`. If a 
 Run this checklist monthly (ideally after each successful build cycle):
 
 - [ ] Confirm latest image version published and replicated to all target regions
-- [ ] Review and deprecate image versions older than 3 months
+- [ ] Run the retention script to keep only the last 3–5 versions per image definition (see [Retention Policy](#retention-policy--keep-the-last-n-versions))
 - [ ] Audit managed identity role assignments — remove any excess permissions
 - [ ] Review customization script logs for warnings or deprecated commands
 - [ ] Verify storage account containing scripts has not exceeded retention policy
