@@ -37,7 +37,7 @@ Instead of manually configuring VMs or maintaining golden images by hand, the fa
 | **Platform / Cloud Engineers** | Deploy and maintain the factory infrastructure |
 | **Security Engineers** | Define hardening scripts and compliance baselines applied at build time |
 | **DevOps / Automation Engineers** | Integrate factory pipelines into existing CI/CD workflows |
-| **Application Teams** | Consume gallery images in VM, VMSS, AVD, or AKS deployments |
+| **Application Teams** | Consume gallery images in VM, VMSS, or AKS deployments |
 
 ---
 
@@ -59,7 +59,7 @@ Trigger (schedule / PR / manual)
         ▼
   Azure Compute Gallery
   • Versioned image stored and replicated
-  • Consumed by VMs, VMSS, AVD, AKS, Citrix DaaS (MCS)
+  • Consumed by VMs, VMSS, AKS, Citrix DaaS (MCS)
 ```
 
 ---

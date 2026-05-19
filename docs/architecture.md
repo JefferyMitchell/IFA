@@ -140,7 +140,6 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
 | **Monthly patch cycle** | Cron-triggered pipeline rebuilds images on Patch Tuesday |
 | **Zero-trust baseline** | Customization scripts apply CIS benchmarks, disable legacy protocols |
 | **Agent injection** | Install monitoring (AMA), security (Defender), or management agents in the golden base |
-| **AVD image factory** | Produce images consumed directly by AVD host pool updates |
 | **Multi-OS** | Separate gallery definitions for Windows, RHEL, Ubuntu — same pipeline structure |
 
 ---

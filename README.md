@@ -9,7 +9,7 @@ Provides an end-to-end factory that:
 - Builds hardened, customized VM images from a source (Marketplace or existing gallery image)
 - Applies customization steps — scripts, Windows Update, agent installation, CIS hardening
 - Publishes versioned images to Azure Compute Gallery
-- Replicates images across regions for consumption by VMs, VMSS, AVD, and AKS
+- Replicates images across regions for consumption by VMs, VMSS, and AKS
 
 ## Repository Structure
 
