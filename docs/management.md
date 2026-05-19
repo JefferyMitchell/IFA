@@ -172,35 +172,155 @@ az deployment group create \
 
 ## Troubleshooting
 
-### Build Fails at Customization Step
+### Step 1 — Get the Full Error Message
 
-Check the packer logs in the AIB staging resource group (see [Monitoring a Build](#monitoring-a-build)). The logs show which customization step failed and the error output from the script.
+When a build fails, the first thing to check is the `lastRunStatus` on the image template. This gives you the error message without digging into logs:
 
-Common causes:
+```bash
+az image builder show \
+  --resource-group rg-image-factory \
+  --name tmpl-win2022-base \
+  --query lastRunStatus
+```
 
-| Symptom | Likely Cause |
-|---|---|
-| Script exits with non-zero code | Script error — test the script locally before using in AIB |
-| Script URI not accessible | Storage account firewall blocking AIB; ensure the managed identity has `Storage Blob Data Reader` on the container |
-| Windows Update times out | Increase `buildTimeoutInMinutes` in the template |
-| Sysprep fails | A running service is preventing generalization — check the script for services that shouldn't persist |
+The response includes `runState`, `runSubState`, and `message`. The `message` field usually identifies which customization step failed and why.
 
-### Build VM Quota Exceeded
+---
 
-If the build fails with a quota error, request a quota increase for the VM SKU used by AIB (`Standard_D2s_v3` by default) in the subscription and region.
+### Step 2 — Read the Packer Log
 
-### Image Version Not Replicating
+For script-level failures, the packer log has line-by-line output from every customization step.
 
-Replication to secondary regions happens asynchronously after the build. Check replication status:
+**Find the AIB staging resource group:**
+
+```bash
+az group list \
+  --query "[?starts_with(name, 'IT_rg-image-factory')].name" \
+  -o tsv
+```
+
+The staging group is created by AIB at build start and deleted after the build (success or failure). If the build is still running or freshly failed, it will still be present.
+
+**Find the storage account inside the staging group:**
+
+```bash
+STAGING_RG="IT_rg-image-factory_tmpl-win2022-base_<guid>"
+
+az storage account list \
+  --resource-group $STAGING_RG \
+  --query "[].name" -o tsv
+```
+
+**Download the packer log:**
+
+```bash
+STAGING_SA="<staging-storage-account-name>"
+
+# List available log blobs
+az storage blob list \
+  --account-name $STAGING_SA \
+  --container-name packerlogs \
+  --auth-mode login \
+  --output table
+
+# Download the log
+az storage blob download \
+  --account-name $STAGING_SA \
+  --container-name packerlogs \
+  --name "pkr-build.log" \
+  --file ./packer-build.log \
+  --auth-mode login
+```
+
+Open `packer-build.log` and search for `ERR` or the name of the failing customization step to find the exact failure point.
+
+> **Tip:** If the staging resource group is already gone, enable **Azure Image Builder Logs** in the template's `distribute` section to send logs to a Log Analytics workspace for post-mortem analysis.
+
+---
+
+### Common Failure Scenarios
+
+#### Build Fails at a Customization Script
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| Script exits with non-zero code | Error in the PowerShell script | Run the script manually in a test VM first |
+| `403 Forbidden` accessing script URI | Managed identity missing `Storage Blob Data Reader` on the scripts container | Re-run `az role assignment create` from `00-prerequisites.sh` |
+| Script URI resolves but download fails | Storage account firewall blocking AIB build subnet | Add AIB's subnet to the storage account network rules, or disable the firewall for the build |
+| `Windows Update` step times out | Too many patches queued for the timeout window | Increase `buildTimeoutMinutes` in `image-template.bicep` (default: 120) |
+| Sysprep fails at generalization | A running service or scheduled task is blocking sysprep | Check the packer log for the sysprep error; disable the offending service in a customization step before sysprep |
+
+#### Permission / Role Assignment Errors
+
+If the template deploys but the build fails immediately with an authorization error:
+
+```bash
+# Confirm the managed identity has Contributor on the resource group
+az role assignment list \
+  --assignee <identity-principal-id> \
+  --resource-group rg-image-factory \
+  --output table
+
+# Confirm the AIB service principal has Contributor at subscription scope
+az role assignment list \
+  --assignee cf32a0cc-373c-47c9-9156-0db11f6a6dfc \
+  --scope /subscriptions/<subscription-id> \
+  --output table
+```
+
+If either assignment is missing, re-run `scripts/setup/00-prerequisites.sh`.
+
+#### Template Deployment Fails (Before Build Starts)
+
+Use `what-if` to validate the template before deploying:
+
+```bash
+az deployment group what-if \
+  --resource-group rg-image-factory \
+  --template-file infra/bicep/image-template.bicep \
+  --parameters storageAccountName=<your-storage-account>
+```
+
+Common causes: referencing a gallery or image definition that doesn't exist yet (run `01-deploy.sh` first), or a template with the same name already in a `Running` state.
+
+#### Build VM Quota Exceeded
+
+The build VM SKU (`Standard_D2s_v3` by default) must have quota available in the target region. If the build fails with a quota error:
+
+```bash
+# Check current quota for the SKU
+az vm list-usage --location eastus \
+  --query "[?contains(name.value, 'standardDSv3Family')]" \
+  --output table
+```
+
+Request a quota increase in the Azure Portal under **Subscriptions → Usage + Quotas**, or change `buildVmSize` in the template to a SKU with available quota.
+
+#### Image Version Not Replicating
+
+Replication to secondary regions happens asynchronously after a successful build. Check per-region replication status:
 
 ```bash
 az sig image-version show \
   --resource-group rg-image-factory \
-  --gallery-name acg_image_factory \
-  --gallery-image-definition windows-server-hardened \
+  --gallery-name acg_golden_images \
+  --gallery-image-definition win2022-base \
   --gallery-image-version 2026.05.19.01 \
   --query publishingProfile.targetRegions
 ```
+
+Each region entry shows a `regionalReplicaCount` and `storageAccountType`. If a region is stuck in `Replicating`, check that the subscription has sufficient storage quota in that region.
+
+#### Citrix VDA Build Failures
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| VDA installer not found at `C:\Windows\Temp\` | File customizer failed to stage the installer | Confirm the blob exists in storage and the identity has `Storage Blob Data Reader` |
+| VDA install exits with code other than 0 or 3 | Install error | Check packer log for the VDA installer output; common causes are missing prerequisites or incompatible OS version |
+| Citrix Optimizer template not found | Wrong template filename or path inside the zip | Verify the XML filename in `run-citrix-optimizer.ps1` matches what is inside `CitrixOptimizer.zip` |
+| BrokerAgent or picaSvc2 not running post-build | VDA install succeeded but validation step failed | Review VDA install log at `C:\Windows\Temp\VDA\` in the packer output |
+
+---
 
 ---
 
