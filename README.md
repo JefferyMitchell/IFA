@@ -14,13 +14,32 @@ Provides an end-to-end factory that:
 ## Repository Structure
 
 ```
-├── docs/                        # Architecture and concept documentation
-│   └── azure-image-factory.md   # Factory overview, design decisions, patterns
+├── docs/                        # GitHub Pages documentation (Just the Docs)
+│   ├── index.md                 # Home / landing page
+│   ├── architecture.md          # Component overview and design decisions
+│   ├── setup.md                 # Prerequisites and deployment steps
+│   ├── configuration.md         # Image definitions, templates, customization
+│   ├── management.md            # Day-to-day operations and troubleshooting
+│   ├── citrix-daas.md           # Citrix DaaS MCS extension guide
+│   └── pics/                    # Architecture diagrams
 │
-├── infra/                       # Deployable infrastructure code
-│   └── bicep/                   # Bicep templates for AIB, ACG, identities, storage
+├── infra/
+│   └── bicep/
+│       ├── main.bicep                       # Infrastructure (identity, storage, gallery)
+│       ├── image-template.bicep             # Base hardened image template
+│       ├── image-template-citrix.bicep      # Citrix VDA image template
+│       ├── citrix-image-definition.bicep    # Citrix gallery image definition
+│       └── modules/                         # Reusable Bicep modules
 │
-├── scripts/                     # Customization scripts run inside the image build
+├── scripts/
+│   ├── setup/                   # Bash scripts for Cloud Shell deployment (run in order)
+│   │   ├── 00-prerequisites.sh
+│   │   ├── 01-deploy.sh
+│   │   ├── 02-upload-scripts.sh
+│   │   ├── 03-deploy-template.sh
+│   │   ├── 04-verify.sh
+│   │   └── citrix/              # Citrix-specific setup scripts
+│   └── customization/           # PowerShell scripts run inside the image build
 │
 └── .github/
     └── workflows/               # CI/CD pipeline definitions (image build automation)
@@ -28,11 +47,11 @@ Provides an end-to-end factory that:
 
 ## Getting Started
 
-> Prerequisites and deployment steps will be added as the solution is built out.
+**Documentation site:** https://jefferymitchell.github.io/AIB
 
-## Documentation
+For full setup instructions, see the [Setup guide](https://jefferymitchell.github.io/AIB/setup).
 
-- [Azure Image Factory — Overview](docs/azure-image-factory.md)
+All deployment scripts are designed to run from **Azure Cloud Shell (Bash)**. Clone the repo to your Cloud Shell storage and run the scripts in order from `scripts/setup/`.
 
 ## Related Azure Services
 

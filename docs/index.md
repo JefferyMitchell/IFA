@@ -13,7 +13,7 @@ An end-to-end reference solution for building, versioning, and distributing hard
 {: .fs-6 .fw-300 }
 
 [Get Started](./setup){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View on GitHub](https://github.com){: .btn .fs-5 .mb-4 .mb-md-0 }
+[View on GitHub](https://github.com/JefferyMitchell/AIB){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
