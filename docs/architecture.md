@@ -163,7 +163,7 @@ Costs that grow with scale:
 - **Replication regions** — each region is a full copy; 3-region replication triples gallery storage cost
 - **Build frequency** — a weekly patch cycle (52 builds/year) on a single definition costs roughly $10/year in compute
 
-> **Cost tip:** Set a retention policy on gallery image versions. Keeping only the last 3–5 versions per definition avoids unbounded storage growth as the factory matures.
+> **Cost tip:** Set a retention policy on gallery image versions. Keeping only the last 3–5 versions per definition avoids unbounded storage growth as the factory matures. See [Retention Policy](./management#retention-policy--keep-the-last-n-versions) in the Management guide for a ready-to-run cleanup script.
 
 ---
 
