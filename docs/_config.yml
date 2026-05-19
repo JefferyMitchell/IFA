@@ -1,9 +1,6 @@
 title: Azure Image Factory
 description: Automated VM image creation with Azure Image Builder and Azure Compute Gallery
-remote_theme: just-the-docs/just-the-docs
-
-plugins:
-  - jekyll-remote-theme
+theme: just-the-docs
 
 # Site settings
 search_enabled: true
