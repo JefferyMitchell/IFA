@@ -37,25 +37,21 @@ The user or service principal deploying the factory needs the following roles:
 | Subscription | `Contributor` (for resource group and resource creation) |
 | Subscription | `User Access Administrator` (to assign roles to the managed identity) |
 
+> **Tip:** The built-in `Owner` role covers both. On a dedicated factory subscription, assigning `Owner` is the simplest approach.
+
 ### Register Resource Providers
 
 Azure Image Builder uses resource providers that may not be registered by default. Run the following in Azure CLI:
 
 ```bash
-az provider register --namespace Microsoft.VirtualMachineImages
-az provider register --namespace Microsoft.Compute
-az provider register --namespace Microsoft.KeyVault
-az provider register --namespace Microsoft.Storage
-az provider register --namespace Microsoft.Network
+az provider register --namespace Microsoft.VirtualMachineImages --wait
+az provider register --namespace Microsoft.Compute --wait
+az provider register --namespace Microsoft.KeyVault --wait
+az provider register --namespace Microsoft.Storage --wait
+az provider register --namespace Microsoft.Network --wait
 ```
 
-Verify registration status:
-
-```bash
-az provider show --namespace Microsoft.VirtualMachineImages --query registrationState
-```
-
-Wait until the output returns `Registered` before proceeding.
+> **Note:** First-time registration can take 5–15 minutes per provider, particularly `Microsoft.VirtualMachineImages`. The `--wait` flag blocks until each provider is fully registered before moving to the next. Subsequent runs are instant.
 
 ### Tools
 
@@ -121,7 +117,8 @@ Upload the build scripts to the storage account created in the previous step:
 az storage blob upload-batch \
   --account-name staimagefactory \
   --destination scripts \
-  --source ./scripts
+  --source ./scripts/customization \
+  --auth-mode key
 ```
 
 ### 5. Configure GitHub Actions
