@@ -124,16 +124,63 @@ az storage blob upload-batch \
 
 ### 5. Configure GitHub Actions
 
-To enable the automated pipeline, add the following secrets to your GitHub repository:
+GitHub Actions authenticates to Azure using OIDC — no client secret required. This requires an app registration in Entra ID with a federated credential, and three repository secrets.
+
+#### Create the App Registration
+
+In the Azure Portal, go to **Entra ID → App registrations → New registration**. Name it (e.g. `sp-image-factory-cicd`) and leave all other defaults. Note the **Application (client) ID** and **Directory (tenant) ID** — you will need them for the secrets below.
+
+#### Add a Federated Credential
+
+On the app registration, go to **Certificates & secrets → Federated credentials → Add credential**.
+
+Set the fields exactly as follows:
+
+| Field | Value |
+|---|---|
+| Federated credential scenario | GitHub Actions deploying Azure resources |
+| Organization | Your GitHub username or org |
+| Repository | Your repository name |
+| Entity type | Branch |
+| Branch | `main` |
+| Audience | `api://AzureADTokenExchange` |
+
+> **Critical:** The audience must be `api://AzureADTokenExchange`. This is the only value accepted by `azure/login`. Any other value (including `api://AzureADTokenV2`) will cause an authentication failure.
+
+If your pipeline runs on multiple branches or uses environments, add a separate federated credential for each.
+
+#### Assign the Required Role
+
+The app registration needs **Owner** on the subscription (or the target resource group). Owner is required because the Bicep templates create role assignments for the managed identity — Contributor alone does not have `Microsoft.Authorization/roleAssignments/write`.
+
+```bash
+az role assignment create \
+  --assignee <application-client-id> \
+  --role Owner \
+  --scope /subscriptions/<subscription-id>
+```
+
+#### Add GitHub Secrets
+
+In your repository go to **Settings → Secrets and variables → Actions → New repository secret** and add:
 
 | Secret | Value |
 |---|---|
-| `AZURE_CLIENT_ID` | App registration client ID |
-| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `AZURE_CLIENT_ID` | Application (client) ID |
+| `AZURE_TENANT_ID` | Directory (tenant) ID |
 | `AZURE_SUBSCRIPTION_ID` | Target subscription ID |
-| `AZURE_RESOURCE_GROUP` | `rg-image-factory` |
 
-Configure OIDC federated credentials on the app registration so GitHub Actions can authenticate without storing a client secret. See [GitHub's guide on Azure OIDC](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure).
+#### Workflow Usage
+
+In your workflow, authenticate using `azure/login@v2` with the three secrets. No `auth-type` parameter is needed — the action detects OIDC automatically when a client secret is absent:
+
+```yaml
+- uses: azure/login@v2
+  with:
+    client-id: ${{ secrets.AZURE_CLIENT_ID }}
+    tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+    subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+```
 
 ---
 
