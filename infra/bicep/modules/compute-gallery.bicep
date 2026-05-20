@@ -11,7 +11,7 @@ resource gallery 'Microsoft.Compute/galleries@2022-03-03' = {
   name: galleryName
   location: location
   properties: {
-    description: 'Azure Image Factory — golden image gallery'
+    description: 'Image Factory for Azure — golden image gallery'
   }
 }
 

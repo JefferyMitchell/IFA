@@ -1,4 +1,4 @@
-# Azure Image Factory
+# Image Factory for Azure
 
 A reference solution for building an automated VM image creation pipeline using **Azure Image Builder (AIB)** and **Azure Compute Gallery (ACG)**. This repo contains both the documentation and the deployable infrastructure code.
 

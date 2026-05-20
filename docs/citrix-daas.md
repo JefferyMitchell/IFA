@@ -7,7 +7,7 @@ nav_order: 6
 # Citrix DaaS — Machine Creation Services Extension
 {: .no_toc }
 
-This guide extends the Azure Image Factory to produce master images for **Citrix DaaS (traditional)** using **Machine Creation Services (MCS)**. MCS consumes images directly from Azure Compute Gallery, making it a natural fit for the factory pipeline.
+This guide extends the Image Factory for Azure to produce master images for **Citrix DaaS (traditional)** using **Machine Creation Services (MCS)**. MCS consumes images directly from Azure Compute Gallery, making it a natural fit for the factory pipeline.
 
 ## Table of Contents
 {: .no_toc .text-delta }
@@ -22,7 +22,7 @@ This guide extends the Azure Image Factory to produce master images for **Citrix
 In the standard Citrix DaaS model on Azure, MCS provisions machine catalogs by cloning a **master image** stored in Azure Compute Gallery. Every VM in the catalog is a thin-clone of that image. When a new image version is published to the gallery, you update the catalog and MCS rolls out the new image on the next machine reset or rebuild cycle.
 
 ```
-Azure Image Factory
+Image Factory for Azure
         │
         ▼
   Azure Compute Gallery

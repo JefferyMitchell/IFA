@@ -1,4 +1,4 @@
-title: Azure Image Factory
+title: Image Factory for Azure
 description: Automated VM image creation with Azure Image Builder and Azure Compute Gallery
 theme: just-the-docs
 
@@ -8,7 +8,7 @@ nav_sort: order
 color_scheme: light
 
 # Footer
-footer_content: "Azure Image Factory &mdash; Reference Solution"
+footer_content: "Image Factory for Azure &mdash; Reference Solution"
 
 # Heading anchor links
 heading_anchors: true

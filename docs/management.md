@@ -7,7 +7,7 @@ nav_order: 5
 # Management
 {: .no_toc }
 
-Day-to-day operations for running, monitoring, and maintaining the Azure Image Factory.
+Day-to-day operations for running, monitoring, and maintaining the Image Factory for Azure.
 
 ## Table of Contents
 {: .no_toc .text-delta }

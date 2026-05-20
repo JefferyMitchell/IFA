@@ -8,7 +8,7 @@ nav_order: 2
 
 An image factory with Azure Image Builder (AIB) is a pipeline that automatically creates, tests, and distributes hardened/customized VM images across your organization.
 
-![Azure Image Factory architecture diagram showing triggers, sources, AIB build process, Compute Gallery distribution, and consumers](<pics/AIB Factory.png>)
+![Image Factory for Azure architecture diagram showing triggers, sources, AIB build process, Compute Gallery distribution, and consumers](<pics/AIB Factory.png>)
 
 ---
 

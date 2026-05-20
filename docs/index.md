@@ -2,11 +2,11 @@
 layout: default
 title: Home
 nav_order: 1
-description: "Azure Image Factory — automated, versioned VM image creation with Azure Image Builder and Azure Compute Gallery."
+description: "Image Factory for Azure — automated, versioned VM image creation with Azure Image Builder and Azure Compute Gallery."
 permalink: /
 ---
 
-# Azure Image Factory
+# Image Factory for Azure
 {: .fs-9 }
 
 An end-to-end reference solution for building, versioning, and distributing hardened VM images across your Azure environment.

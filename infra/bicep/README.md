@@ -1,6 +1,6 @@
 # Infrastructure — Bicep Templates
 
-Bicep templates for deploying the Azure Image Factory infrastructure.
+Bicep templates for deploying the Image Factory for Azure infrastructure.
 
 ## Planned Templates
 

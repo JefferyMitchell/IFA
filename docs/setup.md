@@ -7,7 +7,7 @@ nav_order: 3
 # Setup
 {: .no_toc }
 
-This guide walks through the prerequisites and initial deployment of the Azure Image Factory infrastructure.
+This guide walks through the prerequisites and initial deployment of the Image Factory for Azure infrastructure.
 
 ![ High-level setup flow: you run commands in Cloud Shell, Azure Image Builder builds and customises the golden image, Compute Gallery stores and replicates it, and VMs deploy from the gallery](<pics/build the enviorment.png>)
 
