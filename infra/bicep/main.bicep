@@ -17,6 +17,12 @@ param imageDefinitionName string = 'win2022-base'
 @description('Storage account name for build scripts — must be globally unique, lowercase alphanumeric only')
 param storageAccountName string
 
+@description('Deploy Log Analytics workspace and monitoring dashboards')
+param enableMonitoring bool = false
+
+@description('Email address for build failure alerts — required when enableMonitoring is true')
+param alertEmailAddress string = ''
+
 // ── Managed Identity ──────────────────────────────────────────────────────────
 module identity 'modules/managed-identity.bicep' = {
   name: 'deploy-identity'
@@ -43,6 +49,23 @@ module gallery 'modules/compute-gallery.bicep' = {
     location: location
     galleryName: galleryName
     imageDefinitionName: imageDefinitionName
+  }
+}
+
+// ── Monitoring (optional) ─────────────────────────────────────────────────────
+module logAnalytics 'modules/log-analytics.bicep' = if (enableMonitoring) {
+  name: 'deploy-log-analytics'
+  params: {
+    location: location
+  }
+}
+
+module monitoring 'modules/monitoring.bicep' = if (enableMonitoring) {
+  name: 'deploy-monitoring'
+  params: {
+    location: location
+    workspaceId: enableMonitoring ? logAnalytics.outputs.workspaceId : ''
+    alertEmailAddress: alertEmailAddress
   }
 }
 

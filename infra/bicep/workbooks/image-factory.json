@@ -1,0 +1,117 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# Image Factory — Build Dashboard\n\nLive view of AIB image build activity, success rates, and gallery image versions. Data sourced from Azure Activity Log."
+      },
+      "name": "header"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Build Summary — Last 30 Days"
+      },
+      "name": "summary-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where ResourceProviderValue =~ 'Microsoft.VirtualMachineImages'\n| where OperationNameValue =~ 'Microsoft.VirtualMachineImages/imageTemplates/run/action'\n| where TimeGenerated > ago(30d)\n| summarize count() by ActivityStatusValue\n| project Status = ActivityStatusValue, Builds = count_",
+        "size": 4,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": { "columnMatch": "Status" },
+          "leftContent": { "columnMatch": "Builds", "formatter": 12 },
+          "showBorder": true
+        }
+      },
+      "name": "summary-tiles"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Build Success Rate — Last 90 Days"
+      },
+      "name": "trend-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where ResourceProviderValue =~ 'Microsoft.VirtualMachineImages'\n| where OperationNameValue =~ 'Microsoft.VirtualMachineImages/imageTemplates/run/action'\n| where TimeGenerated > ago(90d)\n| summarize\n    Succeeded = countif(ActivityStatusValue == 'Succeeded'),\n    Failed = countif(ActivityStatusValue == 'Failed')\n    by bin(TimeGenerated, 7d)\n| order by TimeGenerated asc",
+        "size": 0,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "barchart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            { "seriesName": "Succeeded", "color": "green" },
+            { "seriesName": "Failed", "color": "red" }
+          ]
+        }
+      },
+      "name": "trend-chart"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Recent Builds"
+      },
+      "name": "recent-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where ResourceProviderValue =~ 'Microsoft.VirtualMachineImages'\n| where OperationNameValue =~ 'Microsoft.VirtualMachineImages/imageTemplates/run/action'\n| project\n    Time = TimeGenerated,\n    Status = ActivityStatusValue,\n    Template = tostring(split(ResourceId, '/')[-1]),\n    TriggeredBy = Caller\n| order by Time desc\n| take 25",
+        "size": 0,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Status",
+              "formatter": 18,
+              "formatOptions": {
+                "thresholdsOptions": "icons",
+                "thresholdsGrid": [
+                  { "operator": "==", "thresholdValue": "Succeeded", "representation": "success" },
+                  { "operator": "==", "thresholdValue": "Failed", "representation": "failed" },
+                  { "operator": "Default", "thresholdValue": null, "representation": "unknown" }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "name": "recent-builds"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Template Deployments — Last 30 Days\n\nShows when image templates were updated (Bicep deployments), indicating configuration or script changes."
+      },
+      "name": "deployments-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where ResourceProviderValue =~ 'Microsoft.VirtualMachineImages'\n| where OperationNameValue =~ 'Microsoft.VirtualMachineImages/imageTemplates/write'\n| where ActivityStatusValue == 'Succeeded'\n| where TimeGenerated > ago(30d)\n| project\n    Time = TimeGenerated,\n    Template = tostring(split(ResourceId, '/')[-1]),\n    DeployedBy = Caller\n| order by Time desc",
+        "size": 0,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "deployments-table"
+    }
+  ],
+  "styleSettings": {},
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

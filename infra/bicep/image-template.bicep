@@ -27,6 +27,9 @@ param buildVmSize string = 'Standard_D2s_v3'
 @description('Maximum build time in minutes before AIB times out')
 param buildTimeoutMinutes int = 120
 
+@description('Resource ID of the Log Analytics workspace for diagnostic logs. Leave empty to skip diagnostics.')
+param logAnalyticsWorkspaceId string = ''
+
 // ── Reference existing resources created by main.bicep ───────────────────────
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: identityName
@@ -110,6 +113,21 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         replicationRegions: replicationRegions
         storageAccountType: 'Standard_LRS'
         excludeFromLatest: false
+      }
+    ]
+  }
+}
+
+// ── Diagnostic Settings (optional) ───────────────────────────────────────────
+resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceId)) {
+  name: 'diag-${imageTemplate.name}'
+  scope: imageTemplate
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
       }
     ]
   }
