@@ -206,16 +206,59 @@ source: {
 
 ## Pipeline Configuration
 
-The GitHub Actions workflow in `.github/workflows/build-image.yml` controls when builds are triggered.
+The workflow at `.github/workflows/build-image.yml` supports three trigger types. All three can be active simultaneously — whichever fires first starts the build.
 
-### Scheduled Build (Monthly Patch Cycle)
+### Trigger 1 — Scheduled (Monthly Patch Cycle)
+
+Runs automatically on the second Wednesday of each month, one week after Patch Tuesday. This gives Microsoft time to stabilize cumulative updates before the factory picks them up.
 
 ```yaml
-on:
-  schedule:
-    - cron: '0 6 * * 3'   # Every Wednesday at 06:00 UTC (Patch Tuesday + 1 day)
-  workflow_dispatch:        # Also allow manual trigger
+schedule:
+  - cron: '0 6 8-14 * 3'  # Second Wednesday of the month at 06:00 UTC
 ```
+
+The cron expression `8-14 * 3` means: day-of-month between 8 and 14, any month, Wednesday (day 3). The second Wednesday always falls in this range.
+
+### Trigger 2 — CI/CD (Script or Template Changes)
+
+Fires automatically when a push to `main` changes customization scripts or Bicep templates. This ensures the published image always reflects the latest code without requiring a manual run.
+
+```yaml
+push:
+  branches: [main]
+  paths:
+    - 'scripts/customization/**'
+    - 'infra/bicep/image-template.bicep'
+    - 'infra/bicep/modules/**'
+```
+
+Changes to documentation, setup scripts, or other files do not trigger a build.
+
+### Trigger 3 — Manual (On-Demand)
+
+Run from **Actions → Build Image → Run workflow** in GitHub. Accepts an optional template name override and a reason field that is logged in the run summary for audit purposes.
+
+```yaml
+workflow_dispatch:
+  inputs:
+    template_name:
+      description: 'Image template name to build'
+      default: tmpl-win2022-base
+    reason:
+      description: 'Reason for manual build'
+      default: 'Manual build'
+```
+
+### Required Repository Configuration
+
+The workflow reads two repository variables (set under **Settings → Secrets and variables → Variables**):
+
+| Variable | Description | Default if unset |
+|---|---|---|
+| `AZURE_RESOURCE_GROUP` | Resource group containing the factory resources | `rg-image-factory` |
+| `STORAGE_ACCOUNT_NAME` | Storage account holding the customization scripts | `staimagefactory` |
+
+Authentication uses the same three secrets documented in [Setup](./setup#5-configure-github-actions): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`.
 
 ### Build VM Size
 

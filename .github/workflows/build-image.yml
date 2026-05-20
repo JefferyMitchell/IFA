@@ -1,0 +1,242 @@
+name: Build Image
+
+on:
+
+  # ── Scheduled: second Wednesday of each month ────────────────────────────────
+  # Runs one week after Patch Tuesday, giving Microsoft time to stabilize releases.
+  # '0 6 8-14 * 3' = 06:00 UTC on the Wednesday falling between the 8th and 14th.
+  schedule:
+    - cron: '0 6 8-14 * 3'
+
+  # ── CI/CD: changes to scripts or templates on main ───────────────────────────
+  # Automatically rebuilds the image when customization scripts or Bicep templates
+  # are updated, ensuring the published image always reflects the latest code.
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/customization/**'
+      - 'infra/bicep/image-template.bicep'
+      - 'infra/bicep/modules/**'
+
+  # ── Manual: on-demand build with optional overrides ──────────────────────────
+  workflow_dispatch:
+    inputs:
+      template_name:
+        description: 'Image template name to build'
+        type: string
+        default: tmpl-win2022-base
+      reason:
+        description: 'Reason for manual build (recorded in run summary)'
+        type: string
+        default: 'Manual build'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RG_NAME: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-image-factory' }}
+  STORAGE_ACCOUNT: ${{ vars.STORAGE_ACCOUNT_NAME || 'staimagefactory' }}
+  TEMPLATE_NAME: ${{ inputs.template_name || 'tmpl-win2022-base' }}
+  GALLERY_NAME: acg_golden_images
+  IMAGE_DEFINITION: win2022-base
+
+jobs:
+
+  # ── 1. Static Validation ────────────────────────────────────────────────────
+  validate:
+    name: Static Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate Bicep templates
+        run: |
+          az bicep install
+          for f in infra/bicep/*.bicep infra/bicep/modules/*.bicep; do
+            echo "Validating $f"
+            az bicep build --file "$f" --stdout > /dev/null
+          done
+
+      - name: Lint shell scripts
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck scripts/setup/*.sh scripts/setup/citrix/*.sh
+
+  # ── 2. Upload Customization Scripts ─────────────────────────────────────────
+  # Always uploads latest scripts so the build picks up any recent changes.
+  upload-scripts:
+    name: Upload Scripts
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload customization scripts to storage
+        run: |
+          az storage blob upload-batch \
+            --account-name ${{ env.STORAGE_ACCOUNT }} \
+            --destination scripts \
+            --source scripts/customization \
+            --overwrite \
+            --auth-mode key
+
+  # ── 3. Build Image ───────────────────────────────────────────────────────────
+  build:
+    name: Build Image
+    needs: upload-scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log build trigger
+        run: |
+          echo "Trigger : ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Reason  : ${{ inputs.reason }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "Commit  : ${{ github.sha }}"
+            echo "Author  : ${{ github.actor }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "Schedule: monthly patch cycle"
+          fi
+
+      - name: Deploy image template
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RG_NAME }} \
+            --template-file infra/bicep/image-template.bicep \
+            --parameters \
+              storageAccountName=${{ env.STORAGE_ACCOUNT }} \
+              replicationRegions='["eastus"]'
+
+      - name: Trigger image build
+        run: |
+          az image builder run \
+            --resource-group ${{ env.RG_NAME }} \
+            --name ${{ env.TEMPLATE_NAME }} \
+            --no-wait
+          echo "Build triggered for ${{ env.TEMPLATE_NAME }}"
+
+      - name: Poll build status
+        run: |
+          echo "Polling every 60s — timeout 120m"
+          for i in $(seq 1 120); do
+            status=$(az image builder show \
+              --resource-group ${{ env.RG_NAME }} \
+              --name ${{ env.TEMPLATE_NAME }} \
+              --query lastRunStatus.runState -o tsv 2>/dev/null || echo "Unknown")
+            echo "[$i/120] Status: $status"
+            if [ "$status" = "Succeeded" ]; then
+              echo "Build succeeded."
+              exit 0
+            elif [ "$status" = "Failed" ] || [ "$status" = "Canceled" ]; then
+              echo "Build ended with: $status"
+              az image builder show \
+                --resource-group ${{ env.RG_NAME }} \
+                --name ${{ env.TEMPLATE_NAME }} \
+                --query lastRunStatus
+              echo ""
+              echo "--- Attempting to retrieve packer log ---"
+              STAGING_RG=$(az group list \
+                --query "[?starts_with(name, 'IT_${{ env.RG_NAME }}')].name" \
+                -o tsv 2>/dev/null | head -1)
+              if [ -n "$STAGING_RG" ]; then
+                echo "Staging RG: $STAGING_RG"
+                STAGING_SA=$(az storage account list \
+                  --resource-group "$STAGING_RG" \
+                  --query "[0].name" -o tsv 2>/dev/null)
+                if [ -n "$STAGING_SA" ]; then
+                  BLOB=$(az storage blob list \
+                    --account-name "$STAGING_SA" \
+                    --container-name packerlogs \
+                    --auth-mode key \
+                    --query "[?ends_with(name, 'customization.log')].name" \
+                    -o tsv 2>/dev/null | head -1)
+                  if [ -n "$BLOB" ]; then
+                    az storage blob download \
+                      --account-name "$STAGING_SA" \
+                      --container-name packerlogs \
+                      --name "$BLOB" \
+                      --file ./customization.log \
+                      --auth-mode key
+                    echo ""
+                    echo "=== PACKER LOG — ERRORS ==="
+                    grep -i "error\|failed\|exception\|exit code" ./customization.log || true
+                    echo ""
+                    echo "=== PACKER LOG — LAST 100 LINES ==="
+                    tail -100 ./customization.log
+                  else
+                    echo "No customization.log found in packerlogs container."
+                  fi
+                else
+                  echo "No storage account found in staging RG."
+                fi
+              else
+                echo "Staging resource group not found — AIB may have already cleaned it up."
+              fi
+              exit 1
+            fi
+            sleep 60
+          done
+          echo "Timed out waiting for build."
+          exit 1
+
+  # ── 4. Verify ────────────────────────────────────────────────────────────────
+  verify:
+    name: Verify and Summarise
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Confirm image version published to gallery
+        run: |
+          count=$(az sig image-version list \
+            --resource-group ${{ env.RG_NAME }} \
+            --gallery-name ${{ env.GALLERY_NAME }} \
+            --gallery-image-definition ${{ env.IMAGE_DEFINITION }} \
+            --query "length(@)" -o tsv)
+          if [ "$count" -lt "1" ]; then
+            echo "ERROR: No image versions found in gallery."
+            exit 1
+          fi
+          echo "Image versions in gallery: $count"
+
+      - name: Build summary
+        run: |
+          latest=$(az sig image-version list \
+            --resource-group ${{ env.RG_NAME }} \
+            --gallery-name ${{ env.GALLERY_NAME }} \
+            --gallery-image-definition ${{ env.IMAGE_DEFINITION }} \
+            --query "sort_by(@, &publishingProfile.publishedDate)[-1].{Version:name, Published:publishingProfile.publishedDate, State:provisioningState}" \
+            --output table)
+          echo "============================================"
+          echo "  Image build complete"
+          echo "============================================"
+          echo ""
+          echo "  Trigger    : ${{ github.event_name }}"
+          echo "  Template   : ${{ env.TEMPLATE_NAME }}"
+          echo "  Gallery    : ${{ env.GALLERY_NAME }}"
+          echo "  Definition : ${{ env.IMAGE_DEFINITION }}"
+          echo ""
+          echo "  Latest version:"
+          echo "$latest"
+          echo "============================================"
