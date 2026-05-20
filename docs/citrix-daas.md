@@ -133,9 +133,10 @@ The customization sequence in order:
 | InstallCitrixVDA | PowerShell | Silent VDA install with MCS flags — no DDC/Cloud Connector addresses baked in |
 | WindowsRestart | Restart | Required after VDA installation |
 | RunCitrixOptimizer | PowerShell | Applies Windows Server 2022 optimization template |
-| ApplyHardening | PowerShell | CIS baseline hardening (runs after VDA so VDA services are accounted for) |
-| WindowsUpdate | Update | Patches applied post-hardening |
-| WindowsRestart | Restart | Final restart before distribution |
+| ApplyHardening | PowerShell | CIS baseline hardening — runs after VDA so VDA services are accounted for |
+| WindowsUpdate | Update | OS patches applied |
+| WindowsRestart | Restart | Restart after patching |
+| ReApplyHardening | PowerShell | Re-runs hardening script — Windows Update can reset service startup types set by the earlier hardening step |
 | PostBuildValidation | PowerShell | Confirms `BrokerAgent` and `picaSvc2` services exist |
 
 ---

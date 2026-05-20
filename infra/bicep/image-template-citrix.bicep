@@ -119,6 +119,13 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         type: 'WindowsRestart'
         restartTimeout: '10m'
       }
+      // Re-apply hardening after Windows Update — patching can reset service startup types
+      {
+        type: 'PowerShell'
+        name: 'ReApplyHardening'
+        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        runElevated: true
+      }
       // Validate VDA is intact after patching before distributing
       {
         type: 'PowerShell'
