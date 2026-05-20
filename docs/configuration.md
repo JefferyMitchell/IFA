@@ -162,8 +162,19 @@ Copies a file from storage into the build VM:
 3. WindowsUpdate
 4. WindowsRestart
 5. PowerShell  — apply OS hardening (post-patch)
-6. WindowsRestart
+6. PowerShell  — validate hardening (inline checks)
 ```
+
+> **Why hardening must run after Windows Update:** Windows Update can reset service startup types. If you disable a service (e.g. RemoteRegistry) in a hardening step and then run Windows Update, the update may silently restore that service to its default startup type. Running your hardening script after the `WindowsUpdate` + `WindowsRestart` steps ensures the final image state reflects your policy, not the post-patch defaults.
+
+#### Inline Script Character Restrictions
+
+AIB wraps `inline` PowerShell commands in a Packer elevated shell template. Certain characters break the string parsing inside that wrapper:
+
+- **Em dashes (`—`)** will cause a parse error: `The string is missing the terminator: '"`. Use a regular hyphen (`-`) instead.
+- **Curly quotes** (`"` `"`) can cause similar issues. Use straight quotes only.
+
+This restriction applies only to `inline` arrays. Scripts referenced via `scriptUri` are downloaded and executed as files, so they are not subject to the same character limitations.
 
 ---
 

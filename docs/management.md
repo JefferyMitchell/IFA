@@ -279,6 +279,8 @@ Open `packer-build.log` and search for `ERR` or the name of the failing customiz
 | Script URI resolves but download fails | Storage account firewall blocking AIB build subnet | Add AIB's subnet to the storage account network rules, or disable the firewall for the build |
 | `Windows Update` step times out | Too many patches queued for the timeout window | Increase `buildTimeoutMinutes` in `image-template.bicep` (default: 120) |
 | Sysprep fails at generalization | A running service or scheduled task is blocking sysprep | Check the packer log for the sysprep error; disable the offending service in a customization step before sysprep |
+| Hardening validation fails after Windows Update (e.g. `RemoteRegistry not disabled`) | Windows Update resets service startup types, undoing settings applied by an earlier hardening step | Re-run the hardening script as a separate step after `WindowsUpdate` + `WindowsRestart` — see [Recommended Step Order](./configuration#recommended-step-order-windows) |
+| Inline script parse error: `The string is missing the terminator: '"` | An em dash (`—`) or curly quote in an `inline` script array is breaking Packer's string parser | Replace em dashes with hyphens (`-`) and curly quotes with straight quotes in all `inline` script values |
 
 #### Permission / Role Assignment Errors
 
