@@ -91,7 +91,7 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         inline: [
           'Write-Output "Validating post-patch state..."'
           'if ((Get-Service -Name RemoteRegistry).StartType -ne "Disabled") { throw "RemoteRegistry not disabled" }'
-          'Write-Output "Validation passed — image ready for distribution"'
+          'Write-Output "Validation passed - image ready for distribution"'
         ]
         runElevated: true
       }
