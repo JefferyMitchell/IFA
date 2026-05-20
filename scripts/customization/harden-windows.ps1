@@ -109,9 +109,9 @@ Set-MpPreference -SubmitSamplesConsent SendAllSamples
 Write-Step "Running post-hardening validation..."
 
 $smb1 = (Get-SmbServerConfiguration).EnableSMB1Protocol
-if ($smb1) { throw "SMBv1 is still enabled — hardening failed" }
+if ($smb1) { throw "SMBv1 is still enabled - hardening failed" }
 
 $remoteReg = (Get-Service -Name RemoteRegistry).StartType
-if ($remoteReg -ne 'Disabled') { throw "RemoteRegistry is not disabled — hardening failed" }
+if ($remoteReg -ne 'Disabled') { throw "RemoteRegistry is not disabled - hardening failed" }
 
-Write-Step "Hardening complete — all checks passed."
+Write-Step "Hardening complete - all checks passed."

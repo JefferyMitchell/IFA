@@ -85,6 +85,12 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         restartTimeout: '10m'
       }
       {
+        type: 'PowerShell'
+        name: 'ReApplyHardening'
+        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        runElevated: true
+      }
+      {
         // Final validation — runs after patching to confirm hardening survived update
         type: 'PowerShell'
         name: 'PostPatchValidation'
