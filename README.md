@@ -47,9 +47,9 @@ Provides an end-to-end factory that:
 
 ## Getting Started
 
-**Documentation site:** https://jefferymitchell.github.io/AIB
+**Documentation site:** https://jefferymitchell.github.io/IFA
 
-For full setup instructions, see the [Setup guide](https://jefferymitchell.github.io/AIB/setup).
+For full setup instructions, see the [Setup guide](https://jefferymitchell.github.io/IFA/setup).
 
 All deployment scripts are designed to run from **Azure Cloud Shell (Bash)**. Clone the repo to your Cloud Shell storage and run the scripts in order from `scripts/setup/`.
 
