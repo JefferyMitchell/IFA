@@ -57,3 +57,7 @@ All deployment scripts are designed to run from **Azure Cloud Shell (Bash)**. Cl
 
 - [Azure Image Builder](https://learn.microsoft.com/azure/virtual-machines/image-builder-overview)
 - [Azure Compute Gallery](https://learn.microsoft.com/azure/virtual-machines/azure-compute-gallery)
+
+---
+
+*This project is not affiliated with or endorsed by Microsoft. Azure Image Builder and Azure Compute Gallery are products of Microsoft Corporation.*

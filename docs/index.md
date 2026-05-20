@@ -73,3 +73,7 @@ Trigger (schedule / PR / manual)
 | [Configuration](./configuration) | Defining images, customization steps, and gallery settings |
 | [Management](./management) | Day-to-day operations, triggering builds, and troubleshooting |
 | [Citrix DaaS (MCS)](./citrix-daas) | Extending the factory to produce Citrix VDA master images for MCS catalogs |
+
+---
+
+*This project is not affiliated with or endorsed by Microsoft. Azure Image Builder and Azure Compute Gallery are products of Microsoft Corporation.*
