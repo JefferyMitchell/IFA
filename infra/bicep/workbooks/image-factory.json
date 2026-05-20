@@ -2,6 +2,34 @@
   "version": "Notebook/1.0",
   "items": [
     {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "sub-id-param",
+            "version": "KqlParameterItem/1.0",
+            "name": "SubscriptionId",
+            "label": "Subscription ID",
+            "type": 1,
+            "isRequired": true,
+            "value": "",
+            "description": "Azure subscription GUID — required for the Marketplace Status panel"
+          },
+          {
+            "id": "loc-param",
+            "version": "KqlParameterItem/1.0",
+            "name": "Location",
+            "label": "Region",
+            "type": 1,
+            "isRequired": true,
+            "value": "eastus"
+          }
+        ]
+      },
+      "name": "parameters"
+    },
+    {
       "type": 1,
       "content": {
         "json": "# Image Factory — Build Dashboard\n\nLive view of AIB image build activity, success rates, and gallery image versions. Data sourced from Azure Activity Log."
@@ -110,6 +138,47 @@
         "visualization": "table"
       },
       "name": "deployments-table"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "---\n\n## Marketplace Source Image Status\n\nLists available versions of the `2022-datacenter-azure-edition` marketplace image in the selected region. Version numbers encode their publication date — the last six digits are `YYMMDD`. For example, `20348.2762.240416` was published **16 April 2024**.\n\nCompare the newest version against the **Last Successful Build** tile. If a newer marketplace version exists, trigger a manual build or wait for the next scheduled run to pick it up (the template uses `version: latest`, so it always pulls the newest at build time).\n\n> Enter your **Subscription ID** and **Region** in the parameters at the top of this workbook."
+      },
+      "name": "marketplace-header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\":\"ARMEndpoint/1.0\",\"data\":null,\"headers\":[],\"method\":\"GET\",\"path\":\"/subscriptions/{SubscriptionId}/providers/Microsoft.Compute/locations/{Location}/publishers/MicrosoftWindowsServer/artifacttypes/vmimage/offers/WindowsServer/skus/2022-datacenter-azure-edition/versions\",\"urlParams\":[{\"key\":\"api-version\",\"value\":\"2024-07-01\"}],\"batchDisabled\":false,\"transformers\":[{\"type\":\"jsonpath\",\"settings\":{\"tablePath\":\"$\",\"columns\":[{\"path\":\"name\",\"columnId\":\"Version\"}]}}]}",
+        "size": 1,
+        "title": "Available Versions — MicrosoftWindowsServer / WindowsServer / 2022-datacenter-azure-edition",
+        "queryType": 12,
+        "resourceType": "microsoft.resources/subscriptions",
+        "visualization": "table",
+        "gridSettings": {
+          "sortBy": [{ "itemKey": "Version", "sortOrder": 2 }]
+        }
+      },
+      "name": "marketplace-versions"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where ResourceProviderValue =~ 'Microsoft.VirtualMachineImages'\n| where OperationNameValue =~ 'Microsoft.VirtualMachineImages/imageTemplates/run/action'\n| where ActivityStatusValue == 'Succeeded'\n| summarize LastBuild = max(TimeGenerated)\n| project Label = 'Last Successful Build', Value = strcat(format_datetime(LastBuild, 'yyyy-MM-dd HH:mm'), ' UTC')",
+        "size": 4,
+        "title": "Last Successful Factory Build",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": { "columnMatch": "Label" },
+          "leftContent": { "columnMatch": "Value", "formatter": 1 },
+          "showBorder": true
+        }
+      },
+      "name": "last-build-tile"
     }
   ],
   "styleSettings": {},

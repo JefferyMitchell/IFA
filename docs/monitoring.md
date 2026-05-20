@@ -65,7 +65,7 @@ The factory deploys a pre-built Workbook that visualises build activity without 
 
 ![Azure Monitor Workbook showing build history tiles, success/fail trend chart, recent builds table, and template deployment history]
 
-The Workbook contains four panels:
+The Workbook contains five panels:
 
 | Panel | What It Shows |
 |---|---|
@@ -73,8 +73,20 @@ The Workbook contains four panels:
 | **Success Rate chart** | Weekly succeeded vs. failed builds over 90 days — shows drift in reliability over time |
 | **Recent Builds table** | Last 25 builds with timestamp, status icon, template name, and who triggered it |
 | **Template Deployments** | When image templates were updated via Bicep — correlate config changes with build outcomes |
+| **Marketplace Source Image Status** | Available versions of `2022-datacenter-azure-edition` in your region, plus when the factory last ran — lets you see at a glance whether a newer patch level is available |
 
 The Workbook reads from Azure Activity Log, which captures all AIB operations with no additional configuration. Once diagnostic settings are enabled, richer per-step build data becomes available in the same workspace.
+
+### Marketplace Status Panel — Setup
+
+The Marketplace Status panel calls the Azure Compute API directly and requires two parameters entered at the top of the Workbook:
+
+| Parameter | What to enter |
+|---|---|
+| **Subscription ID** | Your Azure subscription GUID (`az account show --query id -o tsv`) |
+| **Region** | The Azure region where your image templates run (e.g. `eastus`) |
+
+**Reading the version table:** Marketplace version numbers follow the pattern `build.revision.YYMMDD` — the last six digits encode the publication date. `20348.2762.240416` was published 16 April 2024. Compare the newest version against the **Last Successful Build** tile to determine whether a newer patch level exists. If it does, trigger a manual build or wait for the next scheduled run — the template uses `version: latest`, so it always pulls the newest marketplace image at build time.
 
 ---
 
