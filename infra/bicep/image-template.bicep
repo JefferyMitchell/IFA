@@ -53,7 +53,7 @@ var templateFullName = '${templateName}-${baseTime}'
 
 // ── AIB Image Template ────────────────────────────────────────────────────────
 module imageTemplate 'br/public:avm/res/virtual-machine-images/image-template:0.6.1' = {
-  name: 'deploy-image-template'
+  name: 'avm-image-template'
   params: {
     name: templateName
     baseTime: baseTime
