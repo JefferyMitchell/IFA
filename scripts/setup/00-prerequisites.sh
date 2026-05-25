@@ -54,22 +54,16 @@ fi
 # ── Step 3: Grant AIB service principal Contributor on the subscription ───────
 # AIB needs this to create and delete the temporary staging resource group
 # it provisions automatically during each build run.
+# The App ID (cf32a0cc-...) is the well-known first-party AIB identity, stable
+# across all Azure tenants — no directory lookup required.
 echo ""
-echo "Looking up Azure Image Builder service principal..."
-AIB_SP_ID=$(az ad sp show --id cf32a0cc-373c-47c9-9156-0db11f6a6dfc --query id -o tsv 2>/dev/null || true)
-
-if [[ -z "$AIB_SP_ID" ]]; then
-  echo "ERROR: AIB service principal not found. Ensure the provider is fully registered and retry."
-  exit 1
-fi
-
 echo "Assigning Contributor role to AIB service principal..."
 az role assignment create \
-  --assignee-object-id "$AIB_SP_ID" \
-  --assignee-principal-type ServicePrincipal \
+  --assignee "cf32a0cc-373c-47c9-9156-0db11f6a6dfc" \
   --role "Contributor" \
   --scope "/subscriptions/${SUBSCRIPTION_ID}" \
-  --output none
+  --output none \
+  --only-show-errors || true
 
 echo ""
 echo "Prerequisites complete."
