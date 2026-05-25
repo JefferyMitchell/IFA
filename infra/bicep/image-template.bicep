@@ -3,7 +3,7 @@ targetScope = 'resourceGroup'
 @description('Azure region. Must match the region used for main.bicep.')
 param location string = resourceGroup().location
 
-@description('Name of the AIB image template resource')
+@description('Name prefix for the AIB image template. AVM appends a timestamp, making each deployment a distinct resource.')
 param templateName string = 'tmpl-win2022-base'
 
 @description('Name of the existing user-assigned managed identity (deployed by main.bicep)')
@@ -30,6 +30,10 @@ param buildTimeoutMinutes int = 120
 @description('Resource ID of the Log Analytics workspace for diagnostic logs. Leave empty to skip diagnostics.')
 param logAnalyticsWorkspaceId string = ''
 
+// Passed through to the AVM module so both this file and the module agree on the final resource name,
+// allowing the diagnostic settings scope to be resolved at deployment start (required by BCP120).
+param baseTime string = utcNow('yyyy-MM-dd-HH-mm-ss')
+
 // ── Reference existing resources created by main.bicep ───────────────────────
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: identityName
@@ -44,40 +48,40 @@ resource imageDefinition 'Microsoft.Compute/galleries/images@2022-03-03' existin
   name: imageDefinitionName
 }
 
+// AVM appends baseTime to the name — mirror that here so diagnostics scope is known at start.
+var templateFullName = '${templateName}-${baseTime}'
+
 // ── AIB Image Template ────────────────────────────────────────────────────────
-resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01' = {
-  name: templateName
-  location: location
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${identity.id}': {}
-    }
-  }
-  properties: {
+module imageTemplate 'br/public:avm/res/virtual-machine-images/image-template:0.6.1' = {
+  name: 'deploy-image-template'
+  params: {
+    name: templateName
+    baseTime: baseTime
+    location: location
     buildTimeoutInMinutes: buildTimeoutMinutes
-    vmProfile: {
-      vmSize: buildVmSize
-      osDiskSizeGB: 128
+    vmSize: buildVmSize
+    osDiskSizeGB: 128
+    managedIdentities: {
+      userAssignedResourceIds: [identity.id]
     }
-    source: {
+    imageSource: {
       type: 'PlatformImage'
       publisher: 'MicrosoftWindowsServer'
       offer: 'WindowsServer'
       sku: '2022-datacenter-azure-edition'
       version: 'latest'
     }
-    customize: [
+    customizationSteps: [
       {
         type: 'PowerShell'
         name: 'InstallAgents'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/install-agents.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/install-agents.ps1'
         runElevated: true
       }
       {
         type: 'PowerShell'
         name: 'ApplyHardening'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/harden-windows.ps1'
         runElevated: true
       }
       {
@@ -90,11 +94,10 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
       {
         type: 'PowerShell'
         name: 'ReApplyHardening'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/harden-windows.ps1'
         runElevated: true
       }
       {
-        // Final validation — runs after patching to confirm hardening survived update
         type: 'PowerShell'
         name: 'PostPatchValidation'
         inline: [
@@ -105,10 +108,10 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         runElevated: true
       }
     ]
-    distribute: [
+    distributions: [
       {
         type: 'SharedImage'
-        galleryImageId: imageDefinition.id
+        sharedImageGalleryImageDefinitionResourceId: imageDefinition.id
         runOutputName: 'output-win2022-base'
         replicationRegions: replicationRegions
         storageAccountType: 'Standard_LRS'
@@ -119,9 +122,16 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
 }
 
 // ── Diagnostic Settings (optional) ───────────────────────────────────────────
+// AVM image-template does not expose diagnosticSettings; attach via a separate resource.
+resource deployedTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2024-02-01' existing = {
+  #disable-next-line use-stable-resource-identifiers
+  name: templateFullName
+}
+
 resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceId)) {
-  name: 'diag-${imageTemplate.name}'
-  scope: imageTemplate
+  #disable-next-line use-stable-resource-identifiers
+  name: 'diag-${templateFullName}'
+  scope: deployedTemplate
   properties: {
     workspaceId: logAnalyticsWorkspaceId
     logs: [
@@ -133,5 +143,5 @@ resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' 
   }
 }
 
-output imageTemplateId string = imageTemplate.id
-output imageTemplateName string = imageTemplate.name
+output imageTemplateId string = imageTemplate.outputs.resourceId
+output imageTemplateName string = templateFullName

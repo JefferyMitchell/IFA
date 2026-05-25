@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-RESOURCE_GROUP="rg-imagebuilder"
+RESOURCE_GROUP="${RESOURCE_GROUP:-rg-imagebuilder}"
 LOCATION="eastus"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 

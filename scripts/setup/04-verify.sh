@@ -8,12 +8,13 @@
 
 set -euo pipefail
 
-RESOURCE_GROUP="rg-imagebuilder"
+RESOURCE_GROUP="${RESOURCE_GROUP:-rg-imagebuilder}"
 GALLERY_NAME="acg_golden_images"
 IMAGE_DEFINITION="win2022-base"
 TEST_VM_NAME="vm-golden-test"
 TEST_VM_SIZE="Standard_D2s_v3"
 ADMIN_USERNAME="azureadmin"
+DEPLOY_TEST_VM="${DEPLOY_TEST_VM:-true}"
 
 # ── Detect subscription ───────────────────────────────────────────────────────
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
@@ -46,35 +47,40 @@ echo ""
 echo "Using image version: $IMAGE_VERSION_ID"
 
 # ── Deploy test VM ────────────────────────────────────────────────────────────
-echo ""
-echo "Deploying test VM from gallery image..."
-az vm create \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$TEST_VM_NAME" \
-  --image "$IMAGE_VERSION_ID" \
-  --size "$TEST_VM_SIZE" \
-  --admin-username "$ADMIN_USERNAME" \
-  --generate-ssh-keys \
-  --public-ip-address "" \
-  --output table
+if [[ "$DEPLOY_TEST_VM" == "true" ]]; then
+  echo ""
+  echo "Deploying test VM from gallery image..."
+  az vm create \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$TEST_VM_NAME" \
+    --image "$IMAGE_VERSION_ID" \
+    --size "$TEST_VM_SIZE" \
+    --admin-username "$ADMIN_USERNAME" \
+    --generate-ssh-keys \
+    --public-ip-address "" \
+    --output table
 
-echo ""
-echo "Verifying VM is running..."
-az vm show \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$TEST_VM_NAME" \
-  --query "{Name:name, State:powerState, Size:hardwareProfile.vmSize}" \
-  --show-details \
-  --output table
+  echo ""
+  echo "Verifying VM is running..."
+  az vm show \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$TEST_VM_NAME" \
+    --query "{Name:name, State:powerState, Size:hardwareProfile.vmSize}" \
+    --show-details \
+    --output table
 
-# ── Clean up test VM ──────────────────────────────────────────────────────────
-echo ""
-echo "Cleaning up test VM and associated resources..."
-az vm delete \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$TEST_VM_NAME" \
-  --yes \
-  --no-wait
+  # ── Clean up test VM ──────────────────────────────────────────────────────────
+  echo ""
+  echo "Cleaning up test VM and associated resources..."
+  az vm delete \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$TEST_VM_NAME" \
+    --yes \
+    --no-wait
+else
+  echo ""
+  echo "Skipping test VM deployment (DEPLOY_TEST_VM=false)."
+fi
 
 echo ""
 echo "Verification complete. The factory is operational."

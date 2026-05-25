@@ -3,7 +3,7 @@ targetScope = 'resourceGroup'
 @description('Azure region. Must match the region used for main.bicep.')
 param location string = resourceGroup().location
 
-@description('Name of the AIB image template resource')
+@description('Name prefix for the AIB image template. AVM appends a timestamp, making each deployment a distinct resource.')
 param templateName string = 'tmpl-win2022-citrix-vda'
 
 @description('Name of the existing user-assigned managed identity (deployed by main.bicep)')
@@ -42,55 +42,51 @@ resource imageDefinition 'Microsoft.Compute/galleries/images@2022-03-03' existin
 }
 
 // ── AIB Image Template ────────────────────────────────────────────────────────
-resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01' = {
-  name: templateName
-  location: location
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${identity.id}': {}
-    }
-  }
-  properties: {
+module imageTemplate 'br/public:avm/res/virtual-machine-images/image-template:0.6.1' = {
+  name: 'deploy-image-template-citrix'
+  params: {
+    name: templateName
+    location: location
     buildTimeoutInMinutes: buildTimeoutMinutes
-    vmProfile: {
-      vmSize: buildVmSize
-      osDiskSizeGB: 128
+    vmSize: buildVmSize
+    osDiskSizeGB: 128
+    managedIdentities: {
+      userAssignedResourceIds: [identity.id]
     }
-    source: {
+    imageSource: {
       type: 'PlatformImage'
       publisher: 'MicrosoftWindowsServer'
       offer: 'WindowsServer'
       sku: '2022-datacenter-azure-edition'
       version: 'latest'
     }
-    customize: [
+    customizationSteps: [
       // Stage binaries into the build VM first using the File customizer.
       // AIB authenticates to storage via the managed identity — no SAS token needed.
       {
         type: 'File'
         name: 'StageVDAInstaller'
-        sourceUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/VDAServerSetup.exe'
+        sourceUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/VDAServerSetup.exe'
         destination: 'C:\\Windows\\Temp\\VDAServerSetup.exe'
       }
       {
         type: 'File'
         name: 'StageCitrixOptimizer'
-        sourceUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/CitrixOptimizer.zip'
+        sourceUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/CitrixOptimizer.zip'
         destination: 'C:\\Windows\\Temp\\CitrixOptimizer.zip'
       }
       // Install agents before VDA to ensure monitoring is in place from first boot
       {
         type: 'PowerShell'
         name: 'InstallAgents'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/install-agents.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/install-agents.ps1'
         runElevated: true
       }
       // Install Citrix VDA with MCS optimisation flags
       {
         type: 'PowerShell'
         name: 'InstallCitrixVDA'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/install-citrix-vda.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/install-citrix-vda.ps1'
         runElevated: true
       }
       // VDA installation requires a restart before optimizer can run
@@ -102,14 +98,14 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
       {
         type: 'PowerShell'
         name: 'RunCitrixOptimizer'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/run-citrix-optimizer.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/run-citrix-optimizer.ps1'
         runElevated: true
       }
       // Hardening runs after VDA so it can account for VDA-specific services
       {
         type: 'PowerShell'
         name: 'ApplyHardening'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/harden-windows.ps1'
         runElevated: true
       }
       {
@@ -123,7 +119,7 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
       {
         type: 'PowerShell'
         name: 'ReApplyHardening'
-        scriptUri: 'https://${storageAccountName}.blob.core.windows.net/scripts/harden-windows.ps1'
+        scriptUri: 'https://${storageAccountName}.blob.${environment().suffixes.storage}/scripts/harden-windows.ps1'
         runElevated: true
       }
       // Validate VDA is intact after patching before distributing
@@ -141,10 +137,10 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
         runElevated: true
       }
     ]
-    distribute: [
+    distributions: [
       {
         type: 'SharedImage'
-        galleryImageId: imageDefinition.id
+        sharedImageGalleryImageDefinitionResourceId: imageDefinition.id
         runOutputName: 'output-win2022-citrix-vda'
         replicationRegions: replicationRegions
         storageAccountType: 'Standard_LRS'
@@ -154,5 +150,5 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2023-07-01
   }
 }
 
-output imageTemplateId string = imageTemplate.id
-output imageTemplateName string = imageTemplate.name
+output imageTemplateId string = imageTemplate.outputs.resourceId
+output imageTemplateName string = imageTemplate.outputs.name

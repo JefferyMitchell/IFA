@@ -7,9 +7,8 @@
 
 set -euo pipefail
 
-RESOURCE_GROUP="rg-imagebuilder"
+RESOURCE_GROUP="${RESOURCE_GROUP:-rg-imagebuilder}"
 LOCATION="eastus"
-TEMPLATE_NAME="tmpl-win2022-base"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # ── Detect subscription ───────────────────────────────────────────────────────
@@ -27,14 +26,19 @@ echo "  Storage account : $STORAGE_ACCOUNT_NAME"
 echo ""
 
 # ── Deploy image template ─────────────────────────────────────────────────────
-echo "Deploying AIB image template: $TEMPLATE_NAME"
-az deployment group create \
+echo "Deploying AIB image template..."
+deployment_output=$(az deployment group create \
   --resource-group "$RESOURCE_GROUP" \
   --template-file "$REPO_ROOT/infra/bicep/image-template.bicep" \
   --parameters "$REPO_ROOT/infra/bicep/image-template.parameters.json" \
   --parameters storageAccountName="$STORAGE_ACCOUNT_NAME" location="$LOCATION" \
   --name "deploy-image-template" \
-  --output table
+  --query properties.outputs \
+  --output json)
+
+# AVM appends a UTC timestamp to the template name — retrieve the actual deployed name
+TEMPLATE_NAME=$(echo "$deployment_output" | jq -r '.imageTemplateName.value')
+echo "  Deployed template : $TEMPLATE_NAME"
 
 # ── Trigger build ─────────────────────────────────────────────────────────────
 echo ""

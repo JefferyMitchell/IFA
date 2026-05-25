@@ -1,3 +1,10 @@
+# Claude Code local settings (machine-specific, not for version control)
+.claude/
+
+# ARM template outputs from local Bicep builds
+infra/bicep/*.json
+infra/bicep/modules/*.json
+
 # OS
 .DS_Store
 Thumbs.db
